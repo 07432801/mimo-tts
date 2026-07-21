@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MiMo TTS 语音合成</title>
+<style>
+/* ==================== Reset & Base ==================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 14px; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans SC", sans-serif;
+  background: #0f1117; color: #e1e4e8; min-height: 100vh;
+  display: flex; flex-direction: column; align-items: center;
+}
+a { color: #58a6ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ==================== Layout ==================== */
+.container { max-width: 780px; width: 100%; padding: 24px 16px 48px; }
+
+/* Header */
+.header { text-align: center; margin-bottom: 28px; }
+.header h1 { font-size: 1.6rem; font-weight: 700; color: #f0f6fc; letter-spacing: 0.5px; }
+.header h1 span { color: #58a6ff; }
+.header p { font-size: 0.85rem; color: #8b949e; margin-top: 4px; }
+
+/* ==================== API Key Bar ==================== */
+.api-bar {
+  background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+  padding: 14px 18px; margin-bottom: 20px;
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.api-bar label { font-size: 0.85rem; font-weight: 600; color: #8b949e; white-space: nowrap; }
+.api-bar input {
+  flex: 1; min-width: 180px;
+  background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
+  padding: 7px 10px; color: #e1e4e8; font-size: 0.85rem;
+  font-family: "SF Mono", "Cascadia Code", monospace;
+  transition: border-color .2s;
+}
+.api-bar input:focus { outline: none; border-color: #58a6ff; }
+.api-bar .status {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 0.8rem; padding: 4px 10px; border-radius: 20px;
+  background: #21262d; color: #8b949e; white-space: nowrap;
+}
+.api-bar .status.ok { background: #1a3a2a; color: #3fb950; }
+.api-bar .status.err { background: #3d1a1a; color: #f85149; }
+
+/* ==================== Tabs ==================== */
+.tabs {
+  display: flex; gap: 2px; background: #21262d; border-radius: 10px;
+  padding: 3px; margin-bottom: 20px;
+}
+.tab {
+  flex: 1; text-align: center; padding: 10px 8px; border-radius: 8px;
+  font-size: 0.9rem; font-weight: 500; cursor: pointer;
+  color: #8b949e; transition: all .2s; user-select: none;
+  border: none; background: transparent;
+}
+.tab:hover { color: #e1e4e8; }
+.tab.active { background: #30363d; color: #f0f6fc; }
+
+/* ==================== Panels ==================== */
+.panel { display: none; }
+.panel.active { display: block; }
+
+.card {
+  background: #161b22; border: 1px solid #30363d; border-radius: 10px;
+  padding: 20px; margin-bottom: 16px;
+}
+.card-title {
+  font-size: 0.8rem; font-weight: 600; color: #8b949e;
+  margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+/* Form controls */
+.form-group { margin-bottom: 14px; }
+.form-group:last-child { margin-bottom: 0; }
+.form-group label {
+  display: block; font-size: 0.85rem; font-weight: 500;
+  color: #c9d1d9; margin-bottom: 4px;
+}
+.form-row {
+  display: flex; gap: 12px; flex-wrap: wrap;
+}
+.form-row .form-group { flex: 1; min-width: 140px; }
+
+select, textarea, input[type="text"], input[type="file"]::file-selector-button {
+  width: 100%;
+  background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
+  padding: 8px 10px; color: #e1e4e8; font-size: 0.88rem;
+  transition: border-color .2s;
+}
+select:focus, textarea:focus, input[type="text"]:focus { outline: none; border-color: #58a6ff; }
+select { cursor: pointer; appearance: auto; }
+textarea {
+  resize: vertical; min-height: 72px; line-height: 1.55;
+  font-family: inherit;
+}
+
+/* Style tags */
+.style-tags {
+  display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px;
+}
+.style-tag {
+  padding: 4px 10px; border-radius: 14px; font-size: 0.78rem;
+  border: 1px solid #30363d; background: #21262d; color: #c9d1d9;
+  cursor: pointer; transition: all .15s; user-select: none;
+}
+.style-tag:hover { border-color: #58a6ff; color: #58a6ff; }
+.style-tag.active { background: #1f3a5f; border-color: #58a6ff; color: #58a6ff; }
+
+/* File upload */
+.file-upload {
+  display: flex; align-items: center; gap: 12px;
+  background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
+  padding: 8px 12px; min-height: 38px;
+}
+.file-upload input[type="file"] { display: none; }
+.file-btn {
+  padding: 5px 14px; border-radius: 6px; font-size: 0.82rem;
+  background: #21262d; border: 1px solid #30363d; color: #c9d1d9;
+  cursor: pointer; white-space: nowrap; transition: all .15s;
+}
+.file-btn:hover { background: #30363d; }
+.file-name { font-size: 0.82rem; color: #8b949e; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  padding: 10px 24px; border-radius: 8px; font-size: 0.95rem; font-weight: 600;
+  border: none; cursor: pointer; transition: all .2s;
+  width: 100%; color: #fff;
+}
+.btn-primary { background: #238636; }
+.btn-primary:hover { background: #2ea043; }
+.btn-primary:disabled { background: #1a3a2a; color: #5a7a5a; cursor: not-allowed; }
+.btn-danger { background: #da3633; }
+.btn-danger:hover { background: #f85149; }
+
+/* Audio player */
+.audio-result { margin-top: 12px; display: none; }
+.audio-result.show { display: block; }
+.audio-result audio { width: 100%; border-radius: 6px; }
+
+/* Messages */
+.msg {
+  padding: 10px 14px; border-radius: 8px; font-size: 0.85rem;
+  margin-top: 12px; display: none; line-height: 1.5;
+}
+.msg.show { display: block; }
+.msg.error { background: #3d1a1a; border: 1px solid #5c1a1a; color: #f85149; }
+.msg.info { background: #1a2a3d; border: 1px solid #1a3a5c; color: #79c0ff; }
+
+/* ==================== Info / Footer ==================== */
+.info-box {
+  background: #1a2a3d; border: 1px solid #1a3a5c; border-radius: 8px;
+  padding: 12px 16px; margin-bottom: 16px; font-size: 0.82rem; color: #8b949e; line-height: 1.6;
+}
+.info-box strong { color: #c9d1d9; }
+
+.footer {
+  text-align: center; padding: 24px 0 8px; font-size: 0.78rem; color: #484f58;
+}
+
+/* ==================== Loading spinner ==================== */
+.spinner {
+  display: inline-block; width: 16px; height: 16px;
+  border: 2px solid rgba(255,255,255,0.2); border-top-color: #fff;
+  border-radius: 50%; animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.btn-loading .spinner { margin-right: 4px; }
+
+/* ==================== Responsive ==================== */
+@media (max-width: 520px) {
+  .container { padding: 16px 12px 32px; }
+  .header h1 { font-size: 1.3rem; }
+  .card { padding: 14px; }
+  .api-bar { flex-direction: column; align-items: stretch; }
+  .form-row { flex-direction: column; }
+  .form-row .form-group { min-width: unset; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <h1>🎤 <span>MiMo</span> TTS 语音合成</h1>
+    <p>基于小米 MiMo TTS V2.5 API · 浏览器端直接调用</p>
+  </div>
+
+  <!-- API Key Bar -->
+  <div class="api-bar" id="apiBar">
+    <label for="apiKey">🔑 API Key</label>
+    <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off">
+    <span class="status" id="apiStatus">未配置</span>
+  </div>
+
+  <!-- Info -->
+  <div class="info-box">
+    💡 <strong>自带 API Key</strong>：你的 API Key 仅存储在浏览器本地，不会发送到任何第三方。
+    在 <a href="https://platform.xiaomimimo.com" target="_blank">platform.xiaomimimo.com</a> 获取。
+  </div>
+
+  <!-- Tabs -->
+  <div class="tabs" id="tabs" role="tablist">
+    <button class="tab active" data-panel="tts" role="tab">🔊 预置音色合成</button>
+    <button class="tab" data-panel="design" role="tab">🎨 音色设计</button>
+    <button class="tab" data-panel="clone" role="tab">📋 语音克隆</button>
+  </div>
+
+  <!-- ======== Panel: Preset TTS ======== -->
+  <div class="panel active" id="panel-tts" role="tabpanel">
+    <div class="card">
+      <div class="card-title">合成参数</div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="tts-voice">音色</label>
+          <select id="tts-voice"></select>
+        </div>
+        <div class="form-group">
+          <label for="tts-format">输出格式</label>
+          <select id="tts-format">
+            <option value="wav">WAV</option>
+            <option value="mp3">MP3</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>风格标签 <span style="font-weight:400;color:#8b949e;">点击插入文本</span></label>
+        <div class="style-tags" id="tts-tags"></div>
+      </div>
+      <div class="form-group">
+        <label for="tts-style">风格指令 <span style="font-weight:400;color:#8b949e;">（可选）</span></label>
+        <textarea id="tts-style" placeholder="例如：用温柔的语气朗读" rows="2"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="tts-text">合成文本</label>
+        <textarea id="tts-text" placeholder="请输入要合成的文本..." rows="4"></textarea>
+      </div>
+      <button class="btn btn-primary" id="tts-btn" onclick="synthesize('tts')">
+        <span class="btn-text">🔊 合成并播放</span>
+      </button>
+      <div class="audio-result" id="tts-audio"></div>
+      <div class="msg" id="tts-msg"></div>
+    </div>
+  </div>
+
+  <!-- ======== Panel: Voice Design ======== -->
+  <div class="panel" id="panel-design" role="tabpanel">
+    <div class="card">
+      <div class="card-title">音色设计参数</div>
+      <div class="form-group">
+        <label for="design-voice-desc">音色描述</label>
+        <textarea id="design-voice-desc" placeholder="描述你想要的音色特征，如：一个温柔知性的中年女声，略带沙哑，说话从容……" rows="3"></textarea>
+      </div>
+      <div class="form-group">
+        <label for="design-text">合成文本</label>
+        <textarea id="design-text" placeholder="请输入要合成的文本..." rows="4"></textarea>
+      </div>
+      <button class="btn btn-primary" id="design-btn" onclick="synthesize('design')">
+        <span class="btn-text">🎨 合成并播放</span>
+      </button>
+      <div class="audio-result" id="design-audio"></div>
+      <div class="msg" id="design-msg"></div>
+    </div>
+  </div>
+
+  <!-- ======== Panel: Voice Clone ======== -->
+  <div class="panel" id="panel-clone" role="tabpanel">
+    <div class="card">
+      <div class="card-title">语音克隆参数</div>
+      <div class="form-group">
+        <label>参考音频 <span style="font-weight:400;color:#8b949e;">（建议 10-15 秒清晰人声，mp3/wav，≤10MB）</span></label>
+        <div class="file-upload">
+          <label class="file-btn" for="clone-file">📎 选择文件</label>
+          <input type="file" id="clone-file" accept="audio/*">
+          <span class="file-name" id="clone-filename">未选择</span>
+          <button class="file-btn" id="clone-clear" style="display:none;" onclick="clearCloneFile()">✕</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="clone-text">合成文本</label>
+        <textarea id="clone-text" placeholder="请输入要合成的文本..." rows="4"></textarea>
+      </div>
+      <button class="btn btn-primary" id="clone-btn" onclick="synthesize('clone')">
+        <span class="btn-text">📋 合成并播放</span>
+      </button>
+      <div class="audio-result" id="clone-audio"></div>
+      <div class="msg" id="clone-msg"></div>
+    </div>
+  </div>
+
+  <div class="footer">
+    <a href="https://github.com/你的用户名/mimo-tts-app" target="_blank">GitHub</a>
+    &middot; 需自行配置 MiMo API Key
+  </div>
+</div>
+
+<script>
+// ===================================================================
+//  MiMo TTS Web — 单页应用
+// ===================================================================
+
+// ---- Constants ----
+const API_BASE = 'https://api.xiaomimimo.com/v1';
+const MODELS = {
+  tts:    'mimo-v2.5-tts',
+  design: 'mimo-v2.5-tts-voicedesign',
+  clone:  'mimo-v2.5-tts-voiceclone',
+};
+
+const VOICES = [
+  ['mimo_default', '默认 (智能选择)'],
+  ['冰糖', '冰糖 — 中文女声'],
+  ['茉莉', '茉莉 — 中文女声'],
+  ['苏打', '苏打 — 中文男声'],
+  ['白桦', '白桦 — 中文男声'],
+  ['default_zh', '默认中文'],
+  ['Mia', 'Mia — 英文女声'],
+  ['Chloe', 'Chloe — 英文女声'],
+  ['Milo', 'Milo — 英文男声'],
+  ['Dean', 'Dean — 英文男声'],
+  ['default_en', '默认英文'],
+];
+
+const STYLE_TAGS = [
+  ['开心', '(开心)'], ['悲伤', '(悲伤)'], ['生气', '(生气)'],
+  ['唱歌', '(唱歌)'], ['慵懒', '(慵懒)'], ['温柔', '(温柔)'],
+  ['严肃', '(严肃)'], ['活泼', '(活泼)'], ['耳语', '(耳语)'],
+  ['东北话', '(东北话)'], ['粤语', '(粤语)'], ['四川话', '(四川话)'],
+  ['语速加快', '(语速加快)'], ['语速减慢', '(语速减慢)'],
+  ['深呼吸', '[audio:深呼吸]'], ['叹气', '[audio:叹气]'],
+  ['微笑', '[audio:微笑]'], ['大笑', '[audio:大笑]'],
+];
+
+// ---- State ----
+let cloneFileDataUrl = '';
+
+// ---- Init ----
+document.addEventListener('DOMContentLoaded', () => {
+  // Populate voices
+  const sel = document.getElementById('tts-voice');
+  VOICES.forEach(([val, label]) => {
+    const opt = document.createElement('option');
+    opt.value = val; opt.textContent = label;
+    sel.appendChild(opt);
+  });
+
+  // Populate style tags
+  const tagsContainer = document.getElementById('tts-tags');
+  STYLE_TAGS.forEach(([label, tag]) => {
+    const btn = document.createElement('span');
+    btn.className = 'style-tag';
+    btn.textContent = label;
+    btn.dataset.tag = tag;
+    btn.addEventListener('click', () => {
+      const ta = document.getElementById('tts-text');
+      const start = ta.selectionStart, end = ta.selectionEnd;
+      const text = ta.value;
+      ta.value = text.slice(0, start) + tag + text.slice(end);
+      ta.focus();
+      ta.selectionStart = ta.selectionEnd = start + tag.length;
+    });
+    tagsContainer.appendChild(btn);
+  });
+
+  // Load saved API key
+  const savedKey = localStorage.getItem('mimo_api_key');
+  if (savedKey) {
+    document.getElementById('apiKey').value = savedKey;
+    updateApiStatus(true);
+  }
+
+  // Save API key on change
+  document.getElementById('apiKey').addEventListener('input', (e) => {
+    const key = e.target.value.trim();
+    if (key) {
+      localStorage.setItem('mimo_api_key', key);
+      updateApiStatus(true);
+    } else {
+      localStorage.removeItem('mimo_api_key');
+      updateApiStatus(false);
+    }
+  });
+
+  // Tab switching
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById('panel-' + tab.dataset.panel).classList.add('active');
+    });
+  });
+
+  // File input for voice clone
+  document.getElementById('clone-file').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      showMsg('clone', '文件超过 10MB 限制，请选择更小的音频文件', 'error');
+      e.target.value = '';
+      return;
+    }
+    document.getElementById('clone-filename').textContent = file.name;
+    document.getElementById('clone-clear').style.display = 'inline-block';
+    const reader = new FileReader();
+    reader.onload = (ev) => { cloneFileDataUrl = ev.target.result; };
+    reader.onerror = () => {
+      showMsg('clone', '读取文件失败，请重试', 'error');
+      cloneFileDataUrl = '';
+    };
+    reader.readAsDataURL(file);
+  });
+});
+
+// ---- API ----
+function updateApiStatus(hasKey) {
+  const el = document.getElementById('apiStatus');
+  el.textContent = hasKey ? '✅ 已配置' : '❌ 未配置';
+  el.className = 'status' + (hasKey ? ' ok' : ' err');
+}
+
+function getApiKey() {
+  const key = document.getElementById('apiKey').value.trim();
+  if (!key) throw new Error('请先输入 API Key');
+  return key;
+}
+
+async function synthesize(mode) {
+  const btn = document.getElementById(mode + '-btn');
+  const msg = document.getElementById(mode + '-msg');
+  const audioDiv = document.getElementById(mode + '-audio');
+
+  // Clear previous
+  msg.classList.remove('show');
+  audioDiv.classList.remove('show');
+  audioDiv.innerHTML = '';
+
+  // API Key
+  let apiKey;
+  try { apiKey = getApiKey(); } catch (e) {
+    showMsg(mode, e.message, 'error'); return;
+  }
+
+  // Get inputs
+  let text, model, audioParams, messages;
+
+  if (mode === 'tts') {
+    text = document.getElementById('tts-text').value.trim();
+    const voice = document.getElementById('tts-voice').value;
+    const format = document.getElementById('tts-format').value;
+    const styleText = document.getElementById('tts-style').value.trim();
+
+    if (!text) { showMsg(mode, '请输入合成文本', 'error'); return; }
+
+    model = MODELS.tts;
+    audioParams = { format, voice };
+
+    if (styleText) {
+      messages = [
+        { role: 'user', content: styleText },
+        { role: 'assistant', content: text },
+      ];
+    } else {
+      messages = [{ role: 'assistant', content: text }];
+    }
+
+  } else if (mode === 'design') {
+    const desc = document.getElementById('design-voice-desc').value.trim();
+    text = document.getElementById('design-text').value.trim();
+
+    if (!desc) { showMsg(mode, '请输入音色描述', 'error'); return; }
+    if (!text) { showMsg(mode, '请输入合成文本', 'error'); return; }
+
+    model = MODELS.design;
+    audioParams = { format: 'wav' };
+    messages = [
+      { role: 'user', content: desc },
+      { role: 'assistant', content: text },
+    ];
+
+  } else if (mode === 'clone') {
+    text = document.getElementById('clone-text').value.trim();
+
+    if (!cloneFileDataUrl) { showMsg(mode, '请选择参考音频文件', 'error'); return; }
+    if (!text) { showMsg(mode, '请输入合成文本', 'error'); return; }
+
+    model = MODELS.clone;
+    audioParams = { format: 'wav', voice: cloneFileDataUrl };
+    messages = [{ role: 'assistant', content: text }];
+  }
+
+  // Loading state
+  btn.disabled = true;
+  btn.querySelector('.btn-text').textContent = '';
+  const spinner = document.createElement('span');
+  spinner.className = 'spinner';
+  btn.prepend(spinner);
+  const loadingText = document.createTextNode(' 合成中…');
+  btn.querySelector('.btn-text').after(loadingText);
+
+  try {
+    const resp = await fetch(API_BASE + '/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + apiKey,
+      },
+      body: JSON.stringify({
+        model,
+        modalities: ['text', 'audio'],
+        audio: audioParams,
+        messages,
+      }),
+    });
+
+    if (!resp.ok) {
+      let detail = `HTTP ${resp.status}`;
+      try {
+        const errBody = await resp.json();
+        detail = errBody.error?.message || JSON.stringify(errBody);
+      } catch (_) { /* ignore */ }
+      throw new Error(detail);
+    }
+
+    const data = await resp.json();
+    const choice = data.choices?.[0];
+
+    if (!choice?.message?.audio?.data) {
+      const reasoning = choice?.message?.reasoning_content;
+      throw new Error('响应中没有音频数据' + (reasoning ? `（模型返回了思考过程: ${reasoning.slice(0, 200)}）` : ''));
+    }
+
+    // Decode and play
+    const audioB64 = choice.message.audio.data;
+    const format = audioParams.format || 'wav';
+    const mime = format === 'mp3' ? 'audio/mpeg' : 'audio/wav';
+
+    const binaryStr = atob(audioB64);
+    const bytes = new Uint8Array(binaryStr.length);
+    for (let i = 0; i < binaryStr.length; i++) bytes[i] = binaryStr.charCodeAt(i);
+    const blob = new Blob([bytes], { type: mime });
+    const url = URL.createObjectURL(blob);
+
+    // Show audio player
+    const aud = document.createElement('audio');
+    aud.controls = true;
+    aud.preload = 'auto';
+    aud.src = url;
+    audioDiv.appendChild(aud);
+    audioDiv.classList.add('show');
+
+    // Download link
+    const dl = document.createElement('div');
+    dl.style.marginTop = '8px';
+    dl.style.textAlign = 'right';
+    const dlLink = document.createElement('a');
+    dlLink.href = url;
+    dlLink.download = `mimo_tts_${Date.now()}.${format}`;
+    dlLink.textContent = '⬇ 下载音频';
+    dlLink.style.fontSize = '0.82rem';
+    dlLink.style.color = '#58a6ff';
+    dl.appendChild(dlLink);
+    audioDiv.appendChild(dl);
+
+    showMsg(mode, `✅ 合成成功 (${(blob.size / 1024).toFixed(1)} KB, ${format.toUpperCase()})`, 'info');
+
+  } catch (err) {
+    showMsg(mode, err.message || '请求失败，请检查网络连接', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.querySelector('.btn-text').textContent = mode === 'tts' ? '🔊 合成并播放'
+      : mode === 'design' ? '🎨 合成并播放' : '📋 合成并播放';
+    const sp = btn.querySelector('.spinner');
+    if (sp) sp.remove();
+    const lt = btn.querySelector('.btn-text').nextSibling;
+    if (lt && lt.nodeType === Node.TEXT_NODE) lt.remove();
+  }
+}
+
+// ---- Helpers ----
+function showMsg(mode, text, type) {
+  const el = document.getElementById(mode + '-msg');
+  el.textContent = text;
+  el.className = 'msg show ' + type;
+}
+
+function clearCloneFile() {
+  document.getElementById('clone-file').value = '';
+  document.getElementById('clone-filename').textContent = '未选择';
+  document.getElementById('clone-clear').style.display = 'none';
+  cloneFileDataUrl = '';
+}
+</script>
+</body>
+</html>
