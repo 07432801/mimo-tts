@@ -20,7 +20,7 @@
 
 无需安装任何软件，在浏览器中直接使用：
 
-👉 **[在线体验](https://你的用户名.github.io/mimo-tts-app)**（推送后自动部署生效）
+👉 **[在线体验](https://07432801.github.io/mimo-tts)**（部署后生效）
 
 ### 使用方式
 
@@ -121,29 +121,24 @@ python main.py
 
 ### macOS
 
-一键构建 .app → DMG：
-
 ```bash
-./package.sh
-```
+# 安装依赖
+pip install PySide6 openai
 
-输出：`dist/MiMo-TTS.app` + `dist/MiMo-TTS_v1.0.0.dmg`
+# 运行
+python main.py
+```
 
 ### Windows
 
 在 **Windows 环境** 执行：
 
 ```batch
-pip install pyinstaller
-windows\build.bat
-```
-
-然后用 Inno Setup 编译 `windows\installer.iss` 生成安装包。
-
-或使用 spec 文件：
-
-```batch
-pyinstaller build.spec
+pip install PySide6 openai pyinstaller
+python -m PyInstaller --windowed --onedir --name "MiMo-TTS" ^
+    --add-data "app/resources;app/resources" ^
+    --hidden-import PySide6.QtMultimedia ^
+    main.py
 ```
 
 ## API 文档
