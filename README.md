@@ -87,6 +87,27 @@ python main.py
 
 ### 配置 API Key
 
+### 环境变量配置（可选）
+
+除通过应用界面配置外，也支持通过环境变量注入 API Key（适用于 CI/CD、自动化脚本等场景）：
+
+```bash
+# 创建 .env 文件（已加入 .gitignore，不会误提交）
+cp .env.example .env
+# 编辑 .env 填入你的 API Key
+MIMO_API_KEY=sk-你的API密钥
+```
+
+或直接导出环境变量：
+
+```bash
+export MIMO_API_KEY=sk-你的API密钥
+python main.py
+```
+
+> 优先级：环境变量 `MIMO_API_KEY` > 配置文件 `~/.mimo-tts/config.json`。环境变量设置后，桌面版启动时自动读取，无需在 UI 中再次填写。
+
+
 启动后，点击菜单栏「设置 → API 配置」（或顶部的 ⚙️ 设置按钮）：
 - 填入你的 MiMo API Key（在 https://platform.xiaomimimo.com 获取）
 - 选择或输入 API Base URL

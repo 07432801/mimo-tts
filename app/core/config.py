@@ -77,6 +77,7 @@ class ConfigManager:
 
     def read(self) -> dict:
         """读取配置文件，缺失字段用默认值填充"""
+        # 先加载配置文件
         if CONFIG_FILE.exists():
             try:
                 with open(CONFIG_FILE, "r", encoding="utf-8") as f:
@@ -89,6 +90,12 @@ class ConfigManager:
                 self._config = dict(DEFAULT_CONFIG)
         else:
             self._config = dict(DEFAULT_CONFIG)
+
+        # 环境变量覆盖：MIMO_API_KEY 优先级最高
+        env_key = os.environ.get("MIMO_API_KEY", "").strip()
+        if env_key:
+            self._config["api_key"] = env_key
+
         return self._config
 
     def save(self):
