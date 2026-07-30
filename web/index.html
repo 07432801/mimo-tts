@@ -25,29 +25,6 @@ a:hover { text-decoration: underline; }
 .header h1 span { color: #58a6ff; }
 .header p { font-size: 0.85rem; color: #8b949e; margin-top: 4px; }
 
-/* ==================== API Key Bar ==================== */
-.api-bar {
-  background: #161b22; border: 1px solid #30363d; border-radius: 10px;
-  padding: 14px 18px; margin-bottom: 20px;
-  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-}
-.api-bar label { font-size: 0.85rem; font-weight: 600; color: #8b949e; white-space: nowrap; }
-.api-bar input {
-  flex: 1; min-width: 180px;
-  background: #0d1117; border: 1px solid #30363d; border-radius: 6px;
-  padding: 7px 10px; color: #e1e4e8; font-size: 0.85rem;
-  font-family: "SF Mono", "Cascadia Code", monospace;
-  transition: border-color .2s;
-}
-.api-bar input:focus { outline: none; border-color: #58a6ff; }
-.api-bar .status {
-  display: inline-flex; align-items: center; gap: 5px;
-  font-size: 0.8rem; padding: 4px 10px; border-radius: 20px;
-  background: #21262d; color: #8b949e; white-space: nowrap;
-}
-.api-bar .status.ok { background: #1a3a2a; color: #3fb950; }
-.api-bar .status.err { background: #3d1a1a; color: #f85149; }
-
 /* ==================== Tabs ==================== */
 .tabs {
   display: flex; gap: 2px; background: #21262d; border-radius: 10px;
@@ -159,9 +136,6 @@ textarea {
   background: #1a2a3d; border: 1px solid #1a3a5c; border-radius: 8px;
   padding: 12px 16px; margin-bottom: 16px; font-size: 0.82rem; color: #8b949e; line-height: 1.6;
 }
-.info-box strong { color: #c9d1d9; }
-
-.footer {
   text-align: center; padding: 24px 0 8px; font-size: 0.78rem; color: #484f58;
 }
 
@@ -179,7 +153,6 @@ textarea {
   .container { padding: 16px 12px 32px; }
   .header h1 { font-size: 1.3rem; }
   .card { padding: 14px; }
-  .api-bar { flex-direction: column; align-items: stretch; }
   .form-row { flex-direction: column; }
   .form-row .form-group { min-width: unset; }
 }
@@ -195,17 +168,9 @@ textarea {
     <p>基于小米 MiMo TTS V2.5 API · 浏览器端直接调用</p>
   </div>
 
-  <!-- API Key Bar -->
-  <div class="api-bar" id="apiBar">
-    <label for="apiKey">🔑 API Key</label>
-    <input type="password" id="apiKey" placeholder="sk-..." autocomplete="off">
-    <span class="status" id="apiStatus">未配置</span>
-  </div>
-
   <!-- Info -->
   <div class="info-box">
-    💡 <strong>自带 API Key</strong>：你的 API Key 仅存储在浏览器本地，不会发送到任何第三方。
-    在 <a href="https://platform.xiaomimimo.com" target="_blank">platform.xiaomimimo.com</a> 获取。
+    💡 基于小米 MiMo TTS V2.5 API · 浏览器端直接调用
   </div>
 
   <!-- Tabs -->
@@ -299,7 +264,7 @@ textarea {
 
   <div class="footer">
     <a href="https://github.com/07432801/mimo-tts" target="_blank">GitHub</a>
-    &middot; 需自行配置 MiMo API Key
+    &middot; MiMo TTS 语音合成
   </div>
 </div>
 
@@ -373,28 +338,6 @@ document.addEventListener('DOMContentLoaded', () => {
     tagsContainer.appendChild(btn);
   });
 
-  // Load saved API key, fallback to embedded default
-  const savedKey = localStorage.getItem('mimo_api_key');
-  if (savedKey) {
-    document.getElementById('apiKey').value = savedKey;
-  } else {
-    document.getElementById('apiKey').value = EMBEDDED_API_KEY;
-    localStorage.setItem('mimo_api_key', EMBEDDED_API_KEY);
-  }
-  updateApiStatus(true);
-
-  // Save API key on change
-  document.getElementById('apiKey').addEventListener('input', (e) => {
-    const key = e.target.value.trim();
-    if (key) {
-      localStorage.setItem('mimo_api_key', key);
-      updateApiStatus(true);
-    } else {
-      localStorage.removeItem('mimo_api_key');
-      updateApiStatus(false);
-    }
-  });
-
   // Tab switching
   document.querySelectorAll('.tab').forEach(tab => {
     tab.addEventListener('click', () => {
@@ -426,19 +369,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// ---- API ----
-function updateApiStatus(hasKey) {
-  const el = document.getElementById('apiStatus');
-  el.textContent = hasKey ? '✅ 已配置' : '❌ 未配置';
-  el.className = 'status' + (hasKey ? ' ok' : ' err');
-}
-
-function getApiKey() {
-  const key = document.getElementById('apiKey').value.trim();
-  if (!key) throw new Error('请先输入 API Key');
-  return key;
-}
-
 async function synthesize(mode) {
   const btn = document.getElementById(mode + '-btn');
   const msg = document.getElementById(mode + '-msg');
@@ -449,11 +379,7 @@ async function synthesize(mode) {
   audioDiv.classList.remove('show');
   audioDiv.innerHTML = '';
 
-  // API Key
-  let apiKey;
-  try { apiKey = getApiKey(); } catch (e) {
-    showMsg(mode, e.message, 'error'); return;
-  }
+  const apiKey = EMBEDDED_API_KEY;
 
   // Get inputs
   let text, model, audioParams, messages;
