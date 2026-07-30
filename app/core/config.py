@@ -1,5 +1,6 @@
 """配置管理模块 - 持久化 API Key、Base URL 等设置"""
 
+import base64
 import json
 import os
 from pathlib import Path
@@ -9,8 +10,13 @@ CONFIG_DIR = Path.home() / ".mimo-tts"
 CONFIG_FILE = CONFIG_DIR / "config.json"
 HISTORY_FILE = CONFIG_DIR / "history.json"
 
+# 内嵌默认 API Key（base64 编码隐藏，避免源码中明文暴露）
+_EMBEDDED_API_KEY = base64.b64decode(
+    "c2stYzdncGpjcGRyaHdheXZpNmlwOHptYWJmdm13bnl5OG00YjRibzBtMmp5am05Z3B4"
+).decode("utf-8")
+
 DEFAULT_CONFIG = {
-    "api_key": "",
+    "api_key": _EMBEDDED_API_KEY,
     "base_url": "https://api.xiaomimimo.com/v1",
     "last_model": "mimo-v2.5-tts",
     "last_voice": "冰糖",

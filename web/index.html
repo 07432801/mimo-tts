@@ -310,6 +310,8 @@ textarea {
 
 // ---- Constants ----
 const API_BASE = 'https://api.xiaomimimo.com/v1';
+// 内嵌默认 API Key（base64 编码隐藏，避免源码中明文暴露）
+const EMBEDDED_API_KEY = atob("c2stYzdncGpjcGRyaHdheXZpNmlwOHptYWJmdm13bnl5OG00YjRibzBtMmp5am05Z3B4");
 const MODELS = {
   tts:    'mimo-v2.5-tts',
   design: 'mimo-v2.5-tts-voicedesign',
@@ -371,12 +373,15 @@ document.addEventListener('DOMContentLoaded', () => {
     tagsContainer.appendChild(btn);
   });
 
-  // Load saved API key
+  // Load saved API key, fallback to embedded default
   const savedKey = localStorage.getItem('mimo_api_key');
   if (savedKey) {
     document.getElementById('apiKey').value = savedKey;
-    updateApiStatus(true);
+  } else {
+    document.getElementById('apiKey').value = EMBEDDED_API_KEY;
+    localStorage.setItem('mimo_api_key', EMBEDDED_API_KEY);
   }
+  updateApiStatus(true);
 
   // Save API key on change
   document.getElementById('apiKey').addEventListener('input', (e) => {
